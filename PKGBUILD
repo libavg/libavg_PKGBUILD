@@ -11,6 +11,7 @@ arch=('i686' 'x86_64')
 url='http://www.libavg.de'
 depends=('libtool' 'librsvg' 'libxi' 'gdk-pixbuf2' 'libxml2' 'ffmpeg' 'boost' 'boost-libs' 'python2' 'pango')
 install=$pkgname.install
+backup=('etc/profile.d/libavg.sh' 'etc/profile.d/libavg.csh')
 optdepends=('libvdpau' 'libdc1394' )
 makedepends=(python2)
 license=('LGPL')
