@@ -5,7 +5,7 @@
 
 pkgname=libavg
 pkgver=1.7.1
-pkgrel=3
+pkgrel=4
 pkgdesc='High-level multimedia platform with a focus on interactive art installations.'
 arch=('i686' 'x86_64')
 url='http://www.libavg.de'
