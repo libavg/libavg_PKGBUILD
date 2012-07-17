@@ -1,0 +1,561 @@
+--- src/video/FFMpegDecoder.cpp	2012-07-16 00:44:36.958375065 +0200
++++ src/video/FFMpegDecoder.cpp	2012-07-16 00:49:49.834377691 +0200
+@@ -96,13 +96,13 @@
+ #else
+     switch(err) {
+         case AVERROR_NUMEXPECTED:
+-            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                     sFilename + ": Incorrect image filename syntax (use %%d to specify the image number:");
+         case AVERROR_INVALIDDATA:
+-            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                     sFilename + ": Error while parsing header");
+         case AVERROR_NOFMT:
+-            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                     sFilename + ": Unknown format");
+         default:
+             stringstream s;
+@@ -153,22 +153,22 @@
+ #else
+     AVFormatParameters params;
+     memset(&params, 0, sizeof(params));
+-    err = av_open_input_file(&m_pFormatContext, sFilename.c_str(),
++    err = av_open_input_file(&m_pFormatContext, sFilename.c_str(),
+             0, 0, &params);
+ #endif
+     if (err < 0) {
+         m_sFilename = "";
+         avcodecError(sFilename, err);
+     }
+-
++
+     err = av_find_stream_info(m_pFormatContext);
+     if (err < 0) {
+-        throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++        throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                 sFilename + ": Could not find codec parameters.");
+     }
+ //    dump_format(m_pFormatContext, 0, sFilename.c_str(), false);
+     av_read_play(m_pFormatContext);
+-
++
+     // Find audio and video streams in the file
+     m_VStreamIndex = -1;
+     m_AStreamIndex = -1;
+@@ -181,7 +181,7 @@
+                 }
+                 break;
+             case AVMEDIA_TYPE_AUDIO:
+-                // Ignore the audio stream if we're using sync demuxing.
++                // Ignore the audio stream if we're using sync demuxing.
+                 if (m_AStreamIndex < 0 && bThreadedDemuxer) {
+                     m_AStreamIndex = i;
+                 }
+@@ -190,12 +190,12 @@
+                 break;
+         }
+     }
+-
++
+     // Enable video stream demuxing
+     if (m_VStreamIndex >= 0) {
+         m_pVStream = m_pFormatContext->streams[m_VStreamIndex];
+         m_State = OPENED;
+-
++
+         // Set video parameters
+         m_TimeUnitsPerSecond = 1.0/av_q2d(m_pVStream->time_base);
+         if (m_bUseStreamFPS) {
+@@ -211,7 +211,7 @@
+             m_VStreamIndex = -1;
+             char szBuf[256];
+             avcodec_string(szBuf, sizeof(szBuf), m_pVStream->codec, 0);
+-            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++            throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                     sFilename + ": unsupported codec ("+szBuf+").");
+         }
+         m_PF = calcPixelFormat(true);
+@@ -219,14 +219,14 @@
+     // Enable audio stream demuxing.
+     if (m_AStreamIndex >= 0) {
+         m_pAStream = m_pFormatContext->streams[m_AStreamIndex];
+-
++
+         m_AudioPacket = 0;
+         m_AudioPacketData = 0;
+         m_AudioPacketSize = 0;
+-
++
+         m_LastAudioFrameTime = 0;
+         m_AudioStartTimestamp = 0;
+-
++
+         if ((unsigned long long)m_pAStream->start_time != AV_NOPTS_VALUE) {
+             m_AudioStartTimestamp = double(av_q2d(m_pAStream->time_base))
+                     *m_pAStream->start_time;
+@@ -237,14 +237,14 @@
+             m_AStreamIndex = -1;
+             char szBuf[256];
+             avcodec_string(szBuf, sizeof(szBuf), m_pAStream->codec, 0);
+-            m_pAStream = 0;
+-            AVG_TRACE(Logger::WARNING,
++            m_pAStream = 0;
++            AVG_TRACE(Logger::WARNING,
+                     sFilename + ": unsupported codec ("+szBuf+"). Disabling audio.");
+         }
+-        if (m_pAStream->codec->sample_fmt != SAMPLE_FMT_S16) {
++        if (m_pAStream->codec->sample_fmt != AV_SAMPLE_FMT_S16) {
+             m_AStreamIndex = -1;
+-            m_pAStream = 0;
+-            AVG_TRACE(Logger::WARNING,
++            m_pAStream = 0;
++            AVG_TRACE(Logger::WARNING,
+                     sFilename + ": unsupported sample format (!= S16). Disabling audio.");
+         }
+     }
+@@ -274,11 +274,11 @@
+
+     if (m_AStreamIndex >= 0) {
+         if (m_pAStream->codec->channels > m_AP.m_Channels) {
+-            AVG_TRACE(Logger::WARNING,
+-                    m_sFilename << ": unsupported number of channels (" <<
++            AVG_TRACE(Logger::WARNING,
++                    m_sFilename << ": unsupported number of channels (" <<
+                             m_pAStream->codec->channels << "). Disabling audio.");
+             m_AStreamIndex = -1;
+-            m_pAStream = 0;
++            m_pAStream = 0;
+         } else {
+             m_pSampleBuffer = (char*)av_mallocz(SAMPLE_BUFFER_SIZE);
+             m_SampleBufferStart = 0;
+@@ -293,7 +293,7 @@
+     }
+
+     if (m_VStreamIndex < 0 && m_AStreamIndex < 0) {
+-        throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
++        throw Exception(AVG_ERR_VIDEO_INIT_FAILED,
+                 m_sFilename + " does not contain any valid audio or video streams.");
+     }
+
+@@ -311,19 +311,19 @@
+     } else {
+         m_pDemuxer = new FFMpegDemuxer(m_pFormatContext, streamIndexes);
+     }
+-
++
+     m_State = DECODING;
+ }
+
+-void FFMpegDecoder::close()
++void FFMpegDecoder::close()
+ {
+     mutex::scoped_lock lock(s_OpenMutex);
+     mutex::scoped_lock lock2(m_AudioMutex);
+     AVG_TRACE(Logger::MEMORY, "Closing " << m_sFilename);
+-
++
+     delete m_pDemuxer;
+     m_pDemuxer = 0;
+-
++
+     // Close audio and video codecs
+     if (m_pVStream) {
+         avcodec_close(m_pVStream->codec);
+@@ -342,7 +342,7 @@
+             audio_resample_close(m_pAudioResampleContext);
+             m_pAudioResampleContext = 0;
+         }
+-
++
+         if (m_pSampleBuffer) {
+             av_free(m_pSampleBuffer);
+             m_pSampleBuffer = 0;
+@@ -354,7 +354,7 @@
+
+         m_AudioPacketData = 0;
+         m_AudioPacketSize = 0;
+-
++
+         m_SampleBufferStart = 0;
+         m_SampleBufferEnd = 0;
+         m_SampleBufferLeft = 0;
+@@ -362,10 +362,10 @@
+         m_ResampleBufferStart = 0;
+         m_ResampleBufferEnd = 0;
+         m_ResampleBufferSize = 0;
+-
++
+         m_LastAudioFrameTime = 0;
+         m_AudioStartTimestamp = 0;
+-
++
+         m_pAStream = 0;
+         m_AStreamIndex = -1;
+     }
+@@ -373,7 +373,7 @@
+         av_close_input_file(m_pFormatContext);
+         m_pFormatContext = 0;
+     }
+-
++
+     if (m_pSwsContext) {
+         sws_freeContext(m_pSwsContext);
+         m_pSwsContext = 0;
+@@ -407,7 +407,7 @@
+     return info;
+ }
+
+-void FFMpegDecoder::seek(double destTime)
++void FFMpegDecoder::seek(double destTime)
+ {
+     AVG_ASSERT(m_State == DECODING);
+     if (m_bFirstPacket && m_pVStream) {
+@@ -541,7 +541,7 @@
+ static ProfilingZoneID CopyImageProfilingZone("FFMpeg: copy image");
+ static ProfilingZoneID VDPAUCopyProfilingZone("FFMpeg: VDPAU copy");
+
+-FrameAvailableCode FFMpegDecoder::renderToBmps(vector<BitmapPtr>& pBmps,
++FrameAvailableCode FFMpegDecoder::renderToBmps(vector<BitmapPtr>& pBmps,
+         double timeWanted)
+ {
+     AVG_ASSERT(m_State == DECODING);
+@@ -567,7 +567,7 @@
+                     copyPlaneToBmp(pBmps[i], frame.data[i], frame.linesize[i]);
+                 }
+             }
+-#else
++#else
+             ScopeTimer timer(CopyImageProfilingZone);
+             for (unsigned i = 0; i < pBmps.size(); ++i) {
+                 copyPlaneToBmp(pBmps[i], frame.data[i], frame.linesize[i]);
+@@ -629,45 +629,45 @@
+ {
+     int bytesWritten = min(m_SampleBufferEnd - m_SampleBufferStart, size);
+     memcpy(pBuffer, m_pSampleBuffer + m_SampleBufferStart, bytesWritten);
+-
++
+     m_SampleBufferStart += bytesWritten;
+-
++
+     if (m_SampleBufferStart == m_SampleBufferEnd) {
+         m_SampleBufferStart = 0;
+         m_SampleBufferEnd = 0;
+         m_SampleBufferLeft = SAMPLE_BUFFER_SIZE;
+     }
+-
++
+     return bytesWritten;
+ }
+
+ int FFMpegDecoder::copyResampledAudio(unsigned char* pBuffer, int size)
+ {
+     int bytesWritten = 0;
+-
++
+     // If there is no buffered resampled data, resample some more
+     if (m_ResampleBufferStart >= m_ResampleBufferEnd) {
+         resampleAudio();
+     }
+-
++
+     // If we have some data in the resample buffer, copy it over
+     if (m_ResampleBufferStart < m_ResampleBufferEnd) {
+         bytesWritten = min(m_ResampleBufferEnd - m_ResampleBufferStart, size);
+         memcpy(pBuffer, m_pResampleBuffer + m_ResampleBufferStart, bytesWritten);
+-
++
+         m_ResampleBufferStart += bytesWritten;
+         if (m_ResampleBufferStart >= m_ResampleBufferEnd) {
+             m_ResampleBufferStart = 0;
+             m_ResampleBufferEnd = 0;
+         }
+-
++
+         if (m_SampleBufferStart == m_SampleBufferEnd) {
+             m_SampleBufferStart = 0;
+             m_SampleBufferEnd = 0;
+             m_SampleBufferLeft = SAMPLE_BUFFER_SIZE;
+         }
+     }
+-
++
+     return bytesWritten;
+ }
+
+@@ -676,32 +676,32 @@
+     if (!m_pAudioResampleContext) {
+ #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 24, 0)
+         m_pAudioResampleContext = av_audio_resample_init(
+-                m_AP.m_Channels, m_pAStream->codec->channels,
++                m_AP.m_Channels, m_pAStream->codec->channels,
+                 m_AP.m_SampleRate, m_EffectiveSampleRate,
+-                SAMPLE_FMT_S16, SAMPLE_FMT_S16,
++                AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_S16,
+                 16, 10, 0, 0.8);
+ #else
+         m_pAudioResampleContext = audio_resample_init(
+-                m_AP.m_Channels, m_pAStream->codec->channels,
++                m_AP.m_Channels, m_pAStream->codec->channels,
+                 m_AP.m_SampleRate, m_EffectiveSampleRate);
+-#endif
++#endif
+     }
+-
++
+     if (!m_pResampleBuffer) {
+-        m_ResampleBufferSize = (int)(SAMPLE_BUFFER_SIZE *
++        m_ResampleBufferSize = (int)(SAMPLE_BUFFER_SIZE *
+                 ((double)m_AP.m_SampleRate / (double)m_EffectiveSampleRate));
+         m_pResampleBuffer = (char*)av_mallocz(m_ResampleBufferSize);
+     }
+-
+-    int inputSamples =
+-        (m_SampleBufferEnd - m_SampleBufferStart) /
++
++    int inputSamples =
++        (m_SampleBufferEnd - m_SampleBufferStart) /
+         (2 * m_pAStream->codec->channels);
+-
++
+     int outputSamples = audio_resample(m_pAudioResampleContext,
+             (short*)m_pResampleBuffer,
+-            (short*)(m_pSampleBuffer + m_SampleBufferStart),
++            (short*)(m_pSampleBuffer + m_SampleBufferStart),
+             inputSamples);
+-
++
+     // Adjust buffer pointers
+     m_ResampleBufferEnd += outputSamples * 2 * m_AP.m_Channels;
+     m_SampleBufferStart += inputSamples * 2 * m_pAStream->codec->channels;
+@@ -718,12 +718,12 @@
+     av_init_packet(&packet);
+     packet.data = m_AudioPacketData;
+     packet.size = m_AudioPacketSize;
+-    int packetBytesDecoded = avcodec_decode_audio3(m_pAStream->codec,
+-            (short*)(m_pSampleBuffer + m_SampleBufferEnd), &m_SampleBufferLeft,
++    int packetBytesDecoded = avcodec_decode_audio3(m_pAStream->codec,
++            (short*)(m_pSampleBuffer + m_SampleBufferEnd), &m_SampleBufferLeft,
+             &packet);
+ #else
+-    int packetBytesDecoded = avcodec_decode_audio2(m_pAStream->codec,
+-            (short*)(m_pSampleBuffer + m_SampleBufferEnd), &m_SampleBufferLeft,
++    int packetBytesDecoded = avcodec_decode_audio2(m_pAStream->codec,
++            (short*)(m_pSampleBuffer + m_SampleBufferEnd), &m_SampleBufferLeft,
+             m_AudioPacketData, m_AudioPacketSize);
+ #endif
+
+@@ -731,16 +731,16 @@
+     if (packetBytesDecoded < 0) {
+         return -1;
+     }
+-
++
+     // Did not get any data, try again
+     if (packetBytesDecoded == 0) {
+         return 0;
+     }
+-
++
+     // Adjust audio buffer pointers
+     m_SampleBufferEnd += m_SampleBufferLeft;
+     m_SampleBufferLeft = lastSampleBufferSize - m_SampleBufferLeft;
+-
++
+     // Adjust packet data pointers
+     m_AudioPacketData += packetBytesDecoded;
+     m_AudioPacketSize -= packetBytesDecoded;
+@@ -759,7 +759,7 @@
+     if (m_bAudioEOF) {
+         return 0;
+     }
+-
++
+     int packetBytesDecoded;
+     int bytesProduced;
+     unsigned char* pCurBufferPos = pOutputBuffer;
+@@ -780,7 +780,7 @@
+                 } else {
+                     bytesProduced = copyResampledAudio(pCurBufferPos, bufferLeft);
+                 }
+-
++
+                 pCurBufferPos += bytesProduced;
+                 bufferLeft -= bytesProduced;
+
+@@ -791,27 +791,27 @@
+                     return pBuffer->getNumFrames();
+                 }
+             }
+-
++
+             if (m_AudioPacketSize <= 0)
+                 break;
+-
++
+             packetBytesDecoded = decodeAudio();
+-
++
+             // Skip frame on error
+             if (packetBytesDecoded < 0)
+                 break;
+-
++
+             // Did not get any data, try again
+             if (packetBytesDecoded == 0)
+                 continue;
+         }
+-
++
+         // We have decoded all data in the packet, free it
+         if (m_AudioPacket) {
+             av_free_packet(m_AudioPacket);
+             delete m_AudioPacket;
+         }
+-
++
+         // Get a new packet from the audio stream
+         m_AudioPacket = m_pDemuxer->getPacket(m_AStreamIndex);
+         if (!m_AudioPacket) {
+@@ -886,14 +886,14 @@
+             destFmt = PIX_FMT_YUYV422;
+             break;
+         default:
+-            AVG_TRACE(Logger::ERROR, "FFMpegDecoder: Dest format "
++            AVG_TRACE(Logger::ERROR, "FFMpegDecoder: Dest format "
+                     << pBmp->getPixelFormat() << " not supported.");
+             AVG_ASSERT(false);
+             destFmt = PIX_FMT_BGRA;
+     }
+     AVCodecContext const* pContext = getCodecContext();
+     {
+-        if (destFmt == PIX_FMT_BGRA && (pContext->pix_fmt == PIX_FMT_YUV420P ||
++        if (destFmt == PIX_FMT_BGRA && (pContext->pix_fmt == PIX_FMT_YUV420P ||
+                 pContext->pix_fmt == PIX_FMT_YUVJ420P))
+         {
+             ScopeTimer timer(ConvertImageLibavgProfilingZone);
+@@ -903,7 +903,7 @@
+                     frame.linesize[1], false));
+             BitmapPtr pBmpV(new Bitmap(pBmp->getSize(), I8, frame.data[2],
+                     frame.linesize[2], false));
+-            pBmp->copyYUVPixels(*pBmpY, *pBmpU, *pBmpV,
++            pBmp->copyYUVPixels(*pBmpY, *pBmpU, *pBmpV,
+                     pContext->pix_fmt == PIX_FMT_YUVJ420P);
+ #ifdef AVG_ENABLE_VDPAU
+         } else if (destFmt == PIX_FMT_BGRA && usesVDPAU()) {
+@@ -912,14 +912,14 @@
+ #endif
+         } else {
+             if (!m_pSwsContext) {
+-                m_pSwsContext = sws_getContext(pContext->width, pContext->height,
+-                        pContext->pix_fmt, pContext->width, pContext->height, destFmt,
++                m_pSwsContext = sws_getContext(pContext->width, pContext->height,
++                        pContext->pix_fmt, pContext->width, pContext->height, destFmt,
+                         SWS_BICUBIC, 0, 0, 0);
+                 AVG_ASSERT(m_pSwsContext);
+             }
+             {
+                 ScopeTimer timer(ConvertImageSWSProfilingZone);
+-                sws_scale(m_pSwsContext, frame.data, frame.linesize, 0,
++                sws_scale(m_pSwsContext, frame.data, frame.linesize, 0,
+                     pContext->height, destPict.data, destPict.linesize);
+             }
+             if (pBmp->getPixelFormat() == B8G8R8X8) {
+@@ -940,7 +940,7 @@
+         }
+     }
+ }
+-
++
+ PixelFormat FFMpegDecoder::getPixelFormat() const
+ {
+     AVG_ASSERT(m_State != CLOSED);
+@@ -984,8 +984,8 @@
+ FrameAvailableCode FFMpegDecoder::readFrameForTime(AVFrame& frame, double timeWanted)
+ {
+     AVG_ASSERT(m_State == DECODING);
+-//    cerr << "        readFrameForTime " << timeWanted << ", LastFrameTime= "
+-//            << m_LastVideoFrameTime << ", diff= " << m_LastVideoFrameTime-timeWanted
++//    cerr << "        readFrameForTime " << timeWanted << ", LastFrameTime= "
++//            << m_LastVideoFrameTime << ", diff= " << m_LastVideoFrameTime-timeWanted
+ //            << endl;
+     AVG_ASSERT(timeWanted != -1);
+     double timePerFrame = 1.0/m_FPS;
+@@ -1017,7 +1017,7 @@
+ double FFMpegDecoder::readFrame(AVFrame& frame)
+ {
+     AVG_ASSERT(m_State == DECODING);
+-    ScopeTimer timer(DecodeProfilingZone);
++    ScopeTimer timer(DecodeProfilingZone);
+
+     if (m_bEOFPending) {
+         m_bVideoEOF = true;
+@@ -1080,7 +1080,7 @@
+             ", display_picture_number: " << frame.display_picture_number <<
+             ", pts: " << frame.pts << endl;
+
+-    cerr << "key_frame: " << frame.key_frame <<
++    cerr << "key_frame: " << frame.key_frame <<
+            ", pict_type: " << frame.pict_type << endl;
+     AVFrac spts = m_pVStream->pts;
+     cerr << "Stream.pts: " << spts.val + double(spts.num)/spts.den << endl;
+@@ -1128,7 +1128,7 @@
+     string s;
+     if (psz) {
+         s = psz;
+-    }
++    }
+     return s;
+ }
+
+@@ -1137,25 +1137,25 @@
+ {
+     double curVol = m_Volume;
+     double volDiff = m_LastVolume - curVol;
+-
++
+     if (curVol == 1.0 && volDiff == 0.0) {
+         return;
+     }
+-
++
+     short * pData = pBuffer->getData();
+     for (int i = 0; i < pBuffer->getNumFrames()*pBuffer->getNumChannels(); i++) {
+         double fadeVol = 0;
+         if (volDiff != 0 && i < VOLUME_FADE_SAMPLES) {
+             fadeVol = volDiff * (VOLUME_FADE_SAMPLES - i) / VOLUME_FADE_SAMPLES;
+         }
+-
++
+         int s = int(pData[i] * (curVol + fadeVol));
+-
++
+         if (s < -32768)
+             s = -32768;
+         if (s >  32767)
+             s = 32767;
+-
++
+         pData[i] = s;
+     }
+     m_LastVolume = curVol;
+@@ -1201,7 +1201,7 @@
+     BitmapPtr pBmpV(new Bitmap(UVSize, I8));
+     getPlanesFromVDPAU(pRenderState, pBmpY, pBmpU, pBmpV);
+     pBmpDest->copyYUVPixels(*pBmpY, *pBmpU, *pBmpV, false);
+-}
++}
+ #endif
+
+ }
+--- src/video/WrapFFMpeg.h	2012-01-25 12:09:39.000000000 +0100
++++ src/video/WrapFFMpeg.h	2012-07-16 00:24:23.447364886 +0200
+@@ -44,6 +44,7 @@
+ #include <libavformat/avformat.h>
+ #include <libswscale/swscale.h>
+ #include <libavutil/avutil.h>
++#include <libavutil/samplefmt.h>
+ #if LIBAVCODEC_VERSION_MAJOR > 52
+ #include <libavutil/pixdesc.h>
+ #include <libavutil/mathematics.h>
