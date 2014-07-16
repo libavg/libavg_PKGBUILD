@@ -4,7 +4,7 @@
 # Contributor: padfoot <padfoot@exemail.com.au>
 
 pkgname=libavg
-pkgver=1.8.1
+pkgver=1.8.2
 pkgrel=0
 pkgdesc='High-level multimedia platform with a focus on interactive art installations.'
 arch=('i686' 'x86_64')
@@ -15,12 +15,12 @@ backup=('etc/profile.d/libavg.sh' 'etc/profile.d/libavg.csh')
 optdepends=('libvdpau' 'libdc1394' )
 makedepends=(python2)
 license=('LGPL')
-source=("https://github.com/libavg/libavg/archive/v1.8.1.tar.gz"
+source=("https://github.com/libavg/libavg/archive/v${pkgver}.tar.gz"
         $pkgname.sh
         $pkgname.csh
         )
 
-md5sums=('64550a4d7cd17ecb038b0e8daf4b9953'
+md5sums=('4f9d8511cb2c778a9800de0626c45c99'
          'dc87612b5def50777621de5513694824'
          '6224961a395c77e5bfe2b008ddda024f'
         )
